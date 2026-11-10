@@ -51,7 +51,13 @@ class GroupSelectionActivity : AppCompatActivity() {
 
         val top = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(AppUi.dp(this, 20), AppUi.dp(this, 8), AppUi.dp(this, 20), AppUi.dp(this, 8))
+            // Inside apply, `this` refers to the LinearLayout; dp() needs the Activity Context.
+            setPadding(
+                AppUi.dp(this@GroupSelectionActivity, 20),
+                AppUi.dp(this@GroupSelectionActivity, 8),
+                AppUi.dp(this@GroupSelectionActivity, 20),
+                AppUi.dp(this@GroupSelectionActivity, 8)
+            )
         }
         top.addView(AppUi.text(this, "Найди свою группу", 24f, AppUi.ink, true))
         top.addView(AppUi.spacer(this, 5))
