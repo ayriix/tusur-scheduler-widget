@@ -1,0 +1,24 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="#EDEFF3">
+    <TextView android:id="@+id/widget_header" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:text="TUSUR · 576-1"
+        android:textColor="#5D6675" android:textSize="11sp" android:textStyle="bold"/>
+    <TextView android:id="@+id/widget_status" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="5dp"
+        android:text="Загружаю расписание…" android:textColor="#151922"
+        android:textSize="15sp" android:textStyle="bold"/>
+    <TextView android:id="@+id/widget_details" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="3dp"
+        android:text="Нажмите для обновления" android:textColor="#596273" android:textSize="12sp"/>
+    <TextView android:id="@+id/widget_list" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="8dp"
+        android:textColor="#242A35" android:textSize="12sp"/>
+    <TextView android:id="@+id/widget_footer" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="6dp"
+        android:text="Нажмите, чтобы обновить" android:textColor="#7A8494" android:textSize="10sp"/>
+</LinearLayout>
