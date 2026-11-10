@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">TUSUR Schedule</string>
+    <string name="widget_description">Расписание занятий выбранной группы с быстрым переключением дней</string>
+</resources>

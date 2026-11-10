@@ -1,28 +1,37 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:allowBackup="true"
         android:label="TUSUR Schedule"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+        android:theme="@style/Theme.TusurSchedule"
+        android:usesCleartextTraffic="false">
+
+        <activity android:name=".AppearanceActivity" android:exported="false" />
+        <activity android:name=".GroupSelectionActivity" android:exported="false" />
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <receiver
-            android:name=".ScheduleWidgetProvider"
-            android:exported="true">
+
+        <receiver android:name=".ScheduleWidgetProvider" android:exported="true">
             <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
-                <action android:name="ru.tusur.schedulewidget.REFRESH"/>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ru.tusur.schedulewidget.REFRESH" />
+                <action android:name="ru.tusur.schedulewidget.DAY_PREVIOUS" />
+                <action android:name="ru.tusur.schedulewidget.DAY_NEXT" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/schedule_widget_info"/>
+                android:resource="@xml/schedule_widget_info" />
         </receiver>
+
+        <service
+            android:name=".ScheduleWidgetService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
     </application>
 </manifest>

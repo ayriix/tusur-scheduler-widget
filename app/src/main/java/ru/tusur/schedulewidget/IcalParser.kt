@@ -1,73 +1,94 @@
 package ru.tusur.schedulewidget
 
-import java.io.BufferedReader
-import java.io.StringReader
-import java.time.*
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 object IcalParser {
-    private val tomsk = ZoneId.of("Asia/Tomsk")
+    private val defaultZone = ZoneId.of("Asia/Tomsk")
+    private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss", Locale.ROOT)
 
-    // Unfold RFC 5545 continuation lines before parsing VEVENT properties.
+    /** Parses the RFC 5545 event subset used by the public TUSUR timetable feed. */
     fun parse(text: String): List<Lesson> {
-        val unfolded = mutableListOf<String>()
-        text.replace("\r\n", "\n").replace("\r", "\n").split("\n").forEach { line ->
-            if ((line.startsWith(" ") || line.startsWith("\t")) && unfolded.isNotEmpty()) {
-                unfolded[unfolded.lastIndex] += line.drop(1)
-            } else unfolded += line
+        val lines = mutableListOf<String>()
+        text.replace("\r\n", "\n").replace('\r', '\n').split('\n').forEach { line ->
+            if ((line.startsWith(" ") || line.startsWith("\t")) && lines.isNotEmpty()) {
+                lines[lines.lastIndex] += line.drop(1)
+            } else {
+                lines += line
+            }
         }
 
-        val events = mutableListOf<Lesson>()
+        val lessons = mutableListOf<Lesson>()
         var event: MutableMap<String, String>? = null
-        for (line in unfolded) {
-            if (line == "BEGIN:VEVENT") { event = mutableMapOf(); continue }
-            if (line == "END:VEVENT") {
-                event?.let { map ->
-                    val start = parseDate(map["DTSTART"] ?: return@let)
-                    val end = parseDate(map["DTEND"] ?: return@let)
-                    val title = map["SUMMARY"]?.unescapeIcs()?.trim().orEmpty()
-                    if (start != null && end != null && title.isNotBlank()) {
-                        events += Lesson(start.toEpochMilli(), end.toEpochMilli(), title,
-                            map["LOCATION"]?.unescapeIcs()?.trim().orEmpty(),
-                            map["X-ALT-DESC"]?.unescapeIcs()?.trim().orEmpty(),
-                            map["DESCRIPTION"]?.unescapeIcs()?.trim().orEmpty())
-                    }
+        for (line in lines) {
+            when (line) {
+                "BEGIN:VEVENT" -> {
+                    event = mutableMapOf()
+                    continue
                 }
-                event = null
-                continue
+                "END:VEVENT" -> {
+                    event?.let { fields ->
+                        val start = parseDate(fields["DTSTART"], fields["DTSTART_PARAMS"])
+                        val end = parseDate(fields["DTEND"], fields["DTEND_PARAMS"])
+                        val title = fields["SUMMARY"].orEmpty().unescapeIcs().trim()
+                        if (start != null && end != null && end > start && title.isNotBlank()) {
+                            lessons += Lesson(
+                                start = start.toEpochMilli(),
+                                end = end.toEpochMilli(),
+                                title = title,
+                                room = fields["LOCATION"].orEmpty().unescapeIcs().replace('\n', ' ').trim(),
+                                teacher = fields["X-ALT-DESC"].orEmpty().unescapeIcs().trim(),
+                                note = fields["DESCRIPTION"].orEmpty().unescapeIcs().trim()
+                            )
+                        }
+                    }
+                    event = null
+                    continue
+                }
             }
+
             val target = event ?: continue
-            val colon = line.indexOf(':')
-            if (colon <= 0) continue
-            val keyPart = line.substring(0, colon)
-            val key = keyPart.substringBefore(';').uppercase()
+            val separator = line.indexOf(':')
+            if (separator <= 0) continue
+            val property = line.substring(0, separator)
+            val key = property.substringBefore(';').uppercase(Locale.ROOT)
             if (key in setOf("DTSTART", "DTEND", "SUMMARY", "LOCATION", "DESCRIPTION", "X-ALT-DESC")) {
-                target[key] = line.substring(colon + 1)
-                if (key == "DTSTART" || key == "DTEND") target[key + "_PARAMS"] = keyPart
+                target[key] = line.substring(separator + 1)
+                target["${key}_PARAMS"] = property
             }
         }
-        return events.distinctBy { "${it.start}|${it.end}|${it.title}|${it.room}" }.sortedBy { it.start }
+
+        return lessons.distinctBy { "${it.start}|${it.end}|${it.title}|${it.room}" }.sortedBy { it.start }
     }
 
-    private fun parseDate(value: String): Instant? {
+    private fun parseDate(value: String?, parameters: String?): Instant? {
+        if (value.isNullOrBlank()) return null
         return try {
             when {
-                value.endsWith("Z") -> LocalDateTime.parse(value.removeSuffix("Z"),
-                    DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss")).toInstant(ZoneOffset.UTC)
+                value.endsWith("Z") -> LocalDateTime.parse(value.removeSuffix("Z"), dateTimeFormatter)
+                    .toInstant(ZoneOffset.UTC)
                 value.length == 8 -> LocalDate.parse(value, DateTimeFormatter.BASIC_ISO_DATE)
-                    .atStartOfDay(tomsk).toInstant()
+                    .atStartOfDay(defaultZone).toInstant()
                 else -> {
-                    val normalized = when (value.length) {
-                        13 -> value + "00"
-                        else -> value
-                    }
-                    LocalDateTime.parse(normalized, DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss"))
-                        .atZone(tomsk).toInstant()
+                    val zoneId = Regex("TZID=([^;:]+)", RegexOption.IGNORE_CASE)
+                        .find(parameters.orEmpty())?.groupValues?.getOrNull(1)
+                    val zone = zoneId?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: defaultZone
+                    LocalDateTime.parse(value, dateTimeFormatter).atZone(zone).toInstant()
                 }
             }
-        } catch (_: Exception) { null }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun String.unescapeIcs(): String = replace("\\n", "\n")
-        .replace("\\N", "\n").replace("\\,", ",").replace("\\;", ";").replace("\\\\", "\\")
+        .replace("\\N", "\n")
+        .replace("\\,", ",")
+        .replace("\\;", ";")
+        .replace("\\\\", "\\")
 }
