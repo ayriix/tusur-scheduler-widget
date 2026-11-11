@@ -37,9 +37,5 @@
             </intent-filter>
         </receiver>
 
-        <service
-            android:name=".ScheduleWidgetService"
-            android:exported="false"
-            android:permission="android.permission.BIND_REMOTEVIEWS" />
     </application>
 </manifest>

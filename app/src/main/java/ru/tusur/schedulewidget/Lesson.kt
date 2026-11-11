@@ -6,5 +6,6 @@ data class Lesson(
     val title: String,
     val room: String,
     val teacher: String,
-    val note: String = ""
+    val note: String = "",
+    val type: String = "other"
 )

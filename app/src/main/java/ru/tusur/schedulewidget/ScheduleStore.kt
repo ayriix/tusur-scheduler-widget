@@ -30,6 +30,7 @@ object ScheduleStore {
                 put("room", lesson.room)
                 put("teacher", lesson.teacher)
                 put("note", lesson.note)
+                put("type", lesson.type)
             })
         }
         cache(context).edit()
@@ -51,7 +52,8 @@ object ScheduleStore {
                     title = item.optString("title"),
                     room = item.optString("room"),
                     teacher = item.optString("teacher"),
-                    note = item.optString("note")
+                    note = item.optString("note"),
+                    type = item.optString("type", "other")
                 )
             }.sortedBy { it.start }
         } catch (_: Exception) {

@@ -7,7 +7,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.widget.RemoteViews
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -112,36 +111,28 @@ class ScheduleWidgetProvider : AppWidgetProvider() {
                     if (allLessons.isEmpty()) ScheduleStore.error(context) ?: "Нажми ↻ в приложении, чтобы загрузить расписание"
                     else "На этот день занятий нет"
                 )
-                setEmptyView(R.id.widget_lessons, R.id.widget_empty)
                 setOnClickPendingIntent(R.id.widget_root, activityIntent(context, widgetId))
                 setOnClickPendingIntent(R.id.widget_previous, broadcastIntent(context, widgetId, ACTION_DAY_PREVIOUS, 1))
                 setOnClickPendingIntent(R.id.widget_next, broadcastIntent(context, widgetId, ACTION_DAY_NEXT, 2))
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    // Android 12+: RemoteCollectionItems is preferred for small collections.
-                    // Each row now uses drawable resource IDs and tint actions, not Bitmaps,
-                    // keeping the RemoteViews payload compact for launcher Binder updates.
-                    val items = RemoteViews.RemoteCollectionItems.Builder()
-                        .setHasStableIds(true)
-                        .setViewTypeCount(1)
-                    dayLessons.forEach { lesson ->
-                        items.addItem(lesson.start, ScheduleWidgetService.lessonView(context, lesson))
-                    }
-                    setRemoteAdapter(R.id.widget_lessons, items.build())
+                removeAllViews(R.id.widget_lessons_container)
+                if (dayLessons.isEmpty()) {
+                    setViewVisibility(R.id.widget_lessons_container, android.view.View.GONE)
+                    setViewVisibility(R.id.widget_empty, android.view.View.VISIBLE)
                 } else {
-                    val serviceIntent = Intent(context, ScheduleWidgetService::class.java).apply {
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                        data = Uri.parse("tusur://widget-collection/$widgetId")
+                    setViewVisibility(R.id.widget_lessons_container, android.view.View.VISIBLE)
+                    setViewVisibility(R.id.widget_empty, android.view.View.GONE)
+                    val visibleLessons = dayLessons.take(7)
+                    visibleLessons.forEachIndexed { index, lesson ->
+                        addView(R.id.widget_lessons_container, ScheduleWidgetService.lessonView(context, lesson))
+                        if (index != visibleLessons.lastIndex) {
+                            addView(R.id.widget_lessons_container, RemoteViews(context.packageName, R.layout.widget_lesson_spacer))
+                        }
                     }
-                    setRemoteAdapter(R.id.widget_lessons, serviceIntent)
                 }
             }
 
             manager.updateAppWidget(widgetId, views)
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                @Suppress("DEPRECATION")
-                manager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_lessons)
-            }
         }
 
         private fun activityIntent(context: Context, widgetId: Int): PendingIntent {

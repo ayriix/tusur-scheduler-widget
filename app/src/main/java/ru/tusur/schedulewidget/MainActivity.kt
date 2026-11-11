@@ -159,6 +159,7 @@ class MainActivity : AppCompatActivity() {
         content.addView(AppUi.spacer(this, 9))
         val batteryContent = AppUi.column(this, 16)
         batteryContent.addView(AppUi.text(this, "Работа в фоне", 17f, AppUi.ink, true))
+        batteryContent.addView(AppUi.spacer(this, 4))
         val powerManager = getSystemService(PowerManager::class.java)
         val batteryStatus = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
             powerManager?.isIgnoringBatteryOptimizations(packageName) != true) {
@@ -167,6 +168,7 @@ class MainActivity : AppCompatActivity() {
             "Для приложения не действуют стандартные ограничения оптимизации батареи. Фоновая синхронизация всё равно зависит от сети и политики производителя."
         }
         batteryContent.addView(AppUi.text(this, batteryStatus, 13f, AppUi.muted))
+        batteryContent.addView(AppUi.spacer(this, 12))
         val batteryButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "Настройки батареи"
             isAllCaps = false
@@ -208,23 +210,15 @@ class MainActivity : AppCompatActivity() {
                     action = WidgetPinReceiver.ACTION_WIDGET_PINNED
                     data = android.net.Uri.parse("tusur://widget-pinned/${System.currentTimeMillis()}")
                 }
-                val mutabilityFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
-                val flags = PendingIntent.FLAG_UPDATE_CURRENT or mutabilityFlag
+                val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 val callback = PendingIntent.getBroadcast(
                     this, (System.currentTimeMillis() % Int.MAX_VALUE).toInt(), callbackIntent, flags
                 )
                 val accepted = runCatching { manager.requestPinAppWidget(provider, null, callback) }.getOrDefault(false)
                 if (accepted) {
-                    MaterialAlertDialogBuilder(this)
-                        .setTitle("Запрос отправлен")
-                        .setMessage("Главный экран должен показать подтверждение добавления. Если окно не появилось, откройте рабочий стол и добавьте TUSUR Schedule через меню «Виджеты».")
-                        .setPositiveButton("Открыть рабочий стол") { _, _ ->
-                            val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            runCatching { startActivity(home) }
-                        }
-                        .setNegativeButton("Позже", null)
-                        .show()
+                    // true means that the launcher accepts pin requests, not that the widget
+                    // has already been placed. The launcher displays its own confirmation UI.
+                    Toast.makeText(this, "Запрос передан главному экрану. Подтверди добавление, если появится системное окно.", Toast.LENGTH_LONG).show()
                     return
                 }
             }
@@ -275,10 +269,9 @@ class MainActivity : AppCompatActivity() {
             cardContent.addView(tag)
         }
         val card = AppUi.card(this, cardContent, 17)
-        if (isCurrent) {
-            card.setCardBackgroundColor(0xFF26334D.toInt())
-            card.strokeColor = 0xFF5876B8.toInt()
-        }
+        if (isCurrent) card.setCardBackgroundColor(0xFF26334D.toInt())
+        card.strokeWidth = AppUi.dp(this, 2)
+        card.strokeColor = LessonTypeStyle.color(lesson.type)
         return card
     }
 

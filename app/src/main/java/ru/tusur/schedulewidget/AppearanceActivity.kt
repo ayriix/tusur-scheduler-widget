@@ -74,14 +74,16 @@ class AppearanceActivity : AppCompatActivity() {
         currentContent.addView(previewCurrentTitle)
         currentContent.addView(previewCurrentInfo)
         previewCurrentCard = AppUi.card(this, currentContent, 12)
-        previewCurrentCard.strokeWidth = 0
+        previewCurrentCard.strokeWidth = AppUi.dp(this, 2)
+        previewCurrentCard.strokeColor = LessonTypeStyle.color("lecture")
         previewContent.addView(previewCurrentCard)
         previewContent.addView(AppUi.spacer(this, 6))
         val normalContent = AppUi.column(this, 9)
         previewNormalTitle = AppUi.text(this, "13:15–14:50   Информатика · ФЭТ 327 кабинет", 11f, AppUi.ink)
         normalContent.addView(previewNormalTitle)
         previewNormalCard = AppUi.card(this, normalContent, 12)
-        previewNormalCard.strokeWidth = 0
+        previewNormalCard.strokeWidth = AppUi.dp(this, 2)
+        previewNormalCard.strokeColor = LessonTypeStyle.color("laboratory")
         previewContent.addView(previewNormalCard)
         preview = AppUi.card(this, previewContent, WidgetAppearance.radius(this).toInt())
         preview.strokeWidth = 0
