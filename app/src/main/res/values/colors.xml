@@ -1,11 +1,12 @@
 <resources>
-    <color name="app_primary">#8A4E38</color>
-    <color name="app_on_primary">#FFFFFF</color>
-    <color name="app_secondary">#5C695F</color>
-    <color name="app_background">#F4F1EA</color>
-    <color name="app_surface">#FFFCF6</color>
-    <color name="app_surface_variant">#E9E4DA</color>
-    <color name="app_on_surface">#242521</color>
-    <color name="app_on_surface_variant">#66675F</color>
-    <color name="app_outline">#817D73</color>
+    <color name="app_primary">#8BA9FF</color>
+    <color name="app_on_primary">#142449</color>
+    <color name="app_secondary">#A8B9D8</color>
+    <color name="app_background">#0F1217</color>
+    <color name="app_surface">#191E25</color>
+    <color name="app_surface_variant">#222933</color>
+    <color name="app_on_surface">#EFF1F5</color>
+    <color name="app_on_surface_variant">#A4ACB8</color>
+    <color name="app_outline">#394250</color>
+    <color name="launcher_blue">#182AC9</color>
 </resources>

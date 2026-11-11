@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.textfield.TextInputLayout
 import java.util.concurrent.Executors
 
 class GroupSelectionActivity : AppCompatActivity() {
@@ -31,7 +32,7 @@ class GroupSelectionActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        executor.shutdown()
+        executor.shutdownNow()
         super.onDestroy()
     }
 
@@ -40,57 +41,55 @@ class GroupSelectionActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(AppUi.background)
         }
+        AppUi.installSystemBars(this, root)
+
         val toolbar = MaterialToolbar(this).apply {
             title = "Выбор группы"
             setTitleTextColor(AppUi.ink)
             setBackgroundColor(AppUi.background)
             setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
+            setNavigationIconTint(AppUi.ink)
             setNavigationOnClickListener { finish() }
+            elevation = 0f
         }
         root.addView(toolbar, LinearLayout.LayoutParams(-1, AppUi.dp(this, 58)))
 
-        val top = LinearLayout(this).apply {
+        val searchContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            // Inside apply, `this` refers to the LinearLayout; dp() needs the Activity Context.
-            setPadding(
-                AppUi.dp(this@GroupSelectionActivity, 20),
-                AppUi.dp(this@GroupSelectionActivity, 8),
-                AppUi.dp(this@GroupSelectionActivity, 20),
-                AppUi.dp(this@GroupSelectionActivity, 8)
-            )
+            setPadding(AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 8), AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 7))
         }
-        top.addView(AppUi.text(this, "Найди свою группу", 24f, AppUi.ink, true))
-        top.addView(AppUi.spacer(this, 5))
-        top.addView(AppUi.text(this, "Список загружается с официального сайта расписания ТУСУРа. Ищи по номеру группы или названию факультета.", 13f, AppUi.muted))
-        top.addView(AppUi.spacer(this, 12))
-
-        val searchBox = com.google.android.material.textfield.TextInputLayout(this).apply {
-            hint = "Например, 576-1, 576-М или факультет"
-            boxBackgroundMode = com.google.android.material.textfield.TextInputLayout.BOX_BACKGROUND_OUTLINE
+        val searchBox = TextInputLayout(this).apply {
+            hint = "Номер группы или факультет"
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+            setBoxStrokeColor(AppUi.outline)
+            setHintTextColor(android.content.res.ColorStateList.valueOf(AppUi.muted))
         }
         search = com.google.android.material.textfield.TextInputEditText(searchBox.context).apply {
             textSize = 15f
             setSingleLine(true)
+            setTextColor(AppUi.ink)
+            setHintTextColor(AppUi.muted)
         }
         searchBox.addView(search)
-        top.addView(searchBox, LinearLayout.LayoutParams(-1, -2))
-        root.addView(top)
+        searchContainer.addView(searchBox, LinearLayout.LayoutParams(-1, -2))
+        root.addView(searchContainer)
 
-        status = AppUi.text(this, "Загружаю список групп…", 12f, AppUi.muted).apply {
-            setPadding(AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 5), AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 5))
+        status = AppUi.text(this, "Загружаю группы…", 12f, AppUi.muted).apply {
+            setPadding(AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 7), AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 7))
         }
         root.addView(status)
         progress = ProgressBar(this).apply { isIndeterminate = true }
-        root.addView(progress, LinearLayout.LayoutParams(AppUi.dp(this, 32), AppUi.dp(this, 32)).apply {
+        root.addView(progress, LinearLayout.LayoutParams(AppUi.dp(this, 30), AppUi.dp(this, 30)).apply {
             gravity = Gravity.CENTER_HORIZONTAL
-            topMargin = AppUi.dp(this@GroupSelectionActivity, 6)
-            bottomMargin = AppUi.dp(this@GroupSelectionActivity, 6)
+            topMargin = AppUi.dp(this@GroupSelectionActivity, 5)
+            bottomMargin = AppUi.dp(this@GroupSelectionActivity, 5)
         })
 
         val list = RecyclerView(this).apply {
             layoutManager = LinearLayoutManager(this@GroupSelectionActivity)
             clipToPadding = false
-            setPadding(AppUi.dp(this@GroupSelectionActivity, 16), AppUi.dp(this@GroupSelectionActivity, 4), AppUi.dp(this@GroupSelectionActivity, 16), AppUi.dp(this@GroupSelectionActivity, 20))
+            setBackgroundColor(AppUi.background)
+            setPadding(AppUi.dp(this@GroupSelectionActivity, 16), AppUi.dp(this@GroupSelectionActivity, 5), AppUi.dp(this@GroupSelectionActivity, 16), AppUi.dp(this@GroupSelectionActivity, 20))
         }
         adapter = GroupAdapter { selected -> chooseGroup(selected) }
         list.adapter = adapter
@@ -98,12 +97,9 @@ class GroupSelectionActivity : AppCompatActivity() {
 
         search.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                filter(s?.toString().orEmpty())
-            }
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = filter(s?.toString().orEmpty())
             override fun afterTextChanged(s: android.text.Editable?) = Unit
         })
-
         setContentView(root)
     }
 
@@ -111,20 +107,22 @@ class GroupSelectionActivity : AppCompatActivity() {
         progress.visibility = android.view.View.VISIBLE
         executor.execute {
             try {
-                val groups = GroupDirectory.fetch(this)
+                val groups = GroupDirectory.fetch(applicationContext)
                 runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
                     progress.visibility = android.view.View.GONE
                     showGroups(groups)
                 }
             } catch (error: Exception) {
                 runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
                     progress.visibility = android.view.View.GONE
                     status.text = if (allGroups.size > 1) {
-                        "Оффлайн: показываю сохранённый список (${allGroups.size})"
+                        "Офлайн · сохранено групп: ${allGroups.size}"
                     } else {
-                        "Не удалось загрузить каталог. Проверь интернет и попробуй ещё раз."
+                        "Каталог пока недоступен. Проверь подключение и повтори попытку."
                     }
-                    Toast.makeText(this, "Каталог ТУСУРа недоступен: ${error.message ?: "ошибка сети"}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Не удалось загрузить каталог: ${error.message ?: "ошибка сети"}", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -132,9 +130,7 @@ class GroupSelectionActivity : AppCompatActivity() {
 
     private fun showGroups(groups: List<GroupOption>) {
         allGroups = groups.distinctBy { it.path }.sortedWith(compareBy({ it.faculty }, { it.name }))
-        val query = search.text?.toString().orEmpty()
-        filter(query)
-        if (query.isBlank()) status.text = "Найдено групп: ${allGroups.size}"
+        filter(search.text?.toString().orEmpty())
         progress.visibility = android.view.View.GONE
     }
 
@@ -142,12 +138,15 @@ class GroupSelectionActivity : AppCompatActivity() {
         if (!::adapter.isInitialized) return
         val needle = query.trim().lowercase()
         val filtered = if (needle.isBlank()) allGroups else allGroups.filter { group ->
-            val name = group.name.lowercase()
-            val faculty = group.faculty.lowercase()
-            name.contains(needle) || faculty.contains(needle)
+            group.name.lowercase().contains(needle) || group.faculty.lowercase().contains(needle)
         }
         adapter.submit(filtered)
-        if (allGroups.isNotEmpty()) status.text = "Показано: ${filtered.size} из ${allGroups.size}"
+        status.text = when {
+            allGroups.isEmpty() -> "Список групп пока пуст"
+            filtered.isEmpty() -> "Ничего не найдено"
+            needle.isBlank() -> "${allGroups.size} групп"
+            else -> "Найдено: ${filtered.size}"
+        }
     }
 
     private fun chooseGroup(group: GroupOption) {
@@ -174,17 +173,20 @@ private class GroupAdapter(private val onClick: (GroupOption) -> Unit) : Recycle
         val context = parent.context
         val textColumn = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(AppUi.dp(context, 14), AppUi.dp(context, 13), AppUi.dp(context, 14), AppUi.dp(context, 13))
+            setPadding(AppUi.dp(context, 16), AppUi.dp(context, 15), AppUi.dp(context, 16), AppUi.dp(context, 15))
         }
         val title = AppUi.text(context, "576-1", 16f, AppUi.ink, true)
-        val subtitle = AppUi.text(context, "Факультет вычислительных систем", 12f, AppUi.muted)
+        val subtitle = AppUi.text(context, "Факультет", 12f, AppUi.muted)
         textColumn.addView(title)
         textColumn.addView(AppUi.spacer(context, 4))
         textColumn.addView(subtitle)
         val card = AppUi.card(context, textColumn, 16).apply {
             isClickable = true
             isFocusable = true
-            rippleColor = android.content.res.ColorStateList.valueOf(0x227D5546)
+            rippleColor = android.content.res.ColorStateList.valueOf(0x337FA4FF)
+            layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                bottomMargin = AppUi.dp(context, 8)
+            }
         }
         return Holder(card, title, subtitle)
     }

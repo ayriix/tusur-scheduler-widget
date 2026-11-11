@@ -1,11 +1,11 @@
 package ru.tusur.schedulewidget
 
 import android.appwidget.AppWidgetManager
+import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -13,10 +13,43 @@ import java.util.Locale
 class ScheduleWidgetService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory =
         ScheduleRemoteViewsFactory(applicationContext, intent)
+
+    companion object {
+        private val zone = ZoneId.of("Asia/Tomsk")
+        private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT)
+
+        fun lessonView(context: Context, lesson: Lesson): RemoteViews {
+            val now = System.currentTimeMillis()
+            val isCurrent = now >= lesson.start && now < lesson.end
+            val cardColor = if (isCurrent) WidgetAppearance.current(context) else WidgetAppearance.lesson(context)
+            val foreground = WidgetAppearance.contrastColor(cardColor)
+            val muted = WidgetAppearance.mutedTextColor(cardColor)
+            val cardBackground = WidgetAppearance.roundedBitmap(
+                color = cardColor,
+                width = 160,
+                height = 56,
+                radiusPx = 11f
+            )
+            return RemoteViews(context.packageName, R.layout.widget_lesson_item).apply {
+                setImageViewBitmap(R.id.lesson_item_background, cardBackground)
+                setTextViewText(
+                    R.id.lesson_item_time,
+                    "${timeFormatter.format(Instant.ofEpochMilli(lesson.start).atZone(zone))}\n${timeFormatter.format(Instant.ofEpochMilli(lesson.end).atZone(zone))}"
+                )
+                setTextViewText(R.id.lesson_item_title, lesson.title)
+                setTextViewText(R.id.lesson_item_room, LessonText.room(lesson.room))
+                setTextColor(R.id.lesson_item_time, muted)
+                setTextColor(R.id.lesson_item_title, foreground)
+                setTextColor(R.id.lesson_item_room, muted)
+                setInt(R.id.lesson_item_accent, "setBackgroundColor", if (isCurrent) 0xFF8BA9FF.toInt() else muted)
+                setViewVisibility(R.id.lesson_item_accent, if (isCurrent) android.view.View.VISIBLE else android.view.View.INVISIBLE)
+            }
+        }
+    }
 }
 
 private class ScheduleRemoteViewsFactory(
-    private val context: android.content.Context,
+    private val context: Context,
     intent: Intent
 ) : RemoteViewsService.RemoteViewsFactory {
     private val widgetId = intent.getIntExtra(
@@ -35,47 +68,12 @@ private class ScheduleRemoteViewsFactory(
         }.sortedBy { it.start }
     }
 
-    override fun onDestroy() {
-        lessons = emptyList()
-    }
-
+    override fun onDestroy() { lessons = emptyList() }
     override fun getCount(): Int = lessons.size
-
-    override fun getViewAt(position: Int): RemoteViews? {
-        val lesson = lessons.getOrNull(position) ?: return null
-        val now = System.currentTimeMillis()
-        val isCurrent = now >= lesson.start && now < lesson.end
-        val background = if (isCurrent) WidgetAppearance.current(context) else WidgetAppearance.lesson(context)
-        val foreground = WidgetAppearance.contrastColor(background)
-        val muted = WidgetAppearance.mutedTextColor(background)
-        val backgroundBitmap = WidgetAppearance.roundedBitmap(
-            color = background,
-            width = 420,
-            height = 88,
-            radiusPx = 16f
-        )
-
-        return RemoteViews(context.packageName, R.layout.widget_lesson_item).apply {
-            setImageViewBitmap(R.id.lesson_item_background, backgroundBitmap)
-            setTextViewText(
-                R.id.lesson_item_time,
-                "${formatTime(lesson.start)}\n${formatTime(lesson.end)}"
-            )
-            setTextViewText(R.id.lesson_item_title, lesson.title)
-            setTextViewText(R.id.lesson_item_room, lesson.room.ifBlank { "Аудитория не указана" })
-            setTextColor(R.id.lesson_item_time, muted)
-            setTextColor(R.id.lesson_item_title, foreground)
-            setTextColor(R.id.lesson_item_room, muted)
-            setInt(R.id.lesson_item_accent, "setBackgroundColor", if (isCurrent) foreground else muted)
-        }
-    }
-
+    override fun getViewAt(position: Int): RemoteViews? =
+        lessons.getOrNull(position)?.let { ScheduleWidgetService.lessonView(context, it) }
     override fun getLoadingView(): RemoteViews? = null
     override fun getViewTypeCount(): Int = 1
     override fun getItemId(position: Int): Long = lessons.getOrNull(position)?.start ?: position.toLong()
     override fun hasStableIds(): Boolean = true
-
-    private fun formatTime(epochMillis: Long): String =
-        DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT)
-            .format(Instant.ofEpochMilli(epochMillis).atZone(zone))
 }

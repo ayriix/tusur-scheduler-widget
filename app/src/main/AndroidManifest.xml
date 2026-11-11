@@ -5,11 +5,13 @@
     <application
         android:allowBackup="true"
         android:label="TUSUR Schedule"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/Theme.TusurSchedule"
         android:usesCleartextTraffic="false">
 
         <activity android:name=".AppearanceActivity" android:exported="false" />
-        <activity android:name=".GroupSelectionActivity" android:exported="false" />
+        <activity android:name=".GroupSelectionActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
