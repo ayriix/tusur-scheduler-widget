@@ -1,15 +1,21 @@
 package ru.tusur.schedulewidget
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
 import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
+import android.graphics.drawable.GradientDrawable
+import android.widget.ImageView
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatImageButton
 import androidx.core.content.ContextCompat
 import androidx.work.WorkManager
 import com.google.android.material.button.MaterialButton
@@ -78,7 +84,7 @@ class MainActivity : AppCompatActivity() {
         val change = iconButton(R.drawable.ic_edit_24, "Изменить группу") {
             startActivity(Intent(this, GroupSelectionActivity::class.java))
         }
-        groupRow.addView(change, LinearLayout.LayoutParams(AppUi.dp(this, 48), AppUi.dp(this, 46)))
+        groupRow.addView(change, LinearLayout.LayoutParams(AppUi.dp(this, 52), AppUi.dp(this, 52)))
         groupContent.addView(groupRow)
         content.addView(AppUi.card(this, groupContent))
         content.addView(AppUi.spacer(this, 22))
@@ -107,7 +113,7 @@ class MainActivity : AppCompatActivity() {
             ScheduleWidgetProvider.enqueueRefresh(this, true)
             Toast.makeText(this, "Обновление запущено", Toast.LENGTH_SHORT).show()
         }
-        actions.addView(refresh, LinearLayout.LayoutParams(AppUi.dp(this, 52), AppUi.dp(this, 50)))
+        actions.addView(refresh, LinearLayout.LayoutParams(AppUi.dp(this, 52), AppUi.dp(this, 52)))
         val openBrowser = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "Открыть в браузере"
             isAllCaps = false
@@ -115,7 +121,7 @@ class MainActivity : AppCompatActivity() {
             strokeColor = android.content.res.ColorStateList.valueOf(AppUi.outline)
             setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(group.browserUrl))) }
         }
-        val browserParams = LinearLayout.LayoutParams(0, AppUi.dp(this, 50), 1f).apply {
+        val browserParams = LinearLayout.LayoutParams(0, AppUi.dp(this, 52), 1f).apply {
             marginStart = AppUi.dp(this@MainActivity, 10)
         }
         actions.addView(openBrowser, browserParams)
@@ -148,23 +154,48 @@ class MainActivity : AppCompatActivity() {
         widgetContent.addView(addWidget, LinearLayout.LayoutParams(-1, AppUi.dp(this, 46)))
         content.addView(AppUi.card(this, widgetContent))
 
+        content.addView(AppUi.spacer(this, 22))
+        content.addView(AppUi.sectionLabel(this, "ФОНОВОЕ ОБНОВЛЕНИЕ"))
+        content.addView(AppUi.spacer(this, 9))
+        val batteryContent = AppUi.column(this, 16)
+        batteryContent.addView(AppUi.text(this, "Работа в фоне", 17f, AppUi.ink, true))
+        val powerManager = getSystemService(PowerManager::class.java)
+        val batteryStatus = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+            powerManager?.isIgnoringBatteryOptimizations(packageName) != true) {
+            "Система может откладывать фоновую синхронизацию. Проверьте режим работы приложения в настройках батареи."
+        } else {
+            "Для приложения не действуют стандартные ограничения оптимизации батареи. Фоновая синхронизация всё равно зависит от сети и политики производителя."
+        }
+        batteryContent.addView(AppUi.text(this, batteryStatus, 13f, AppUi.muted))
+        val batteryButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Настройки батареи"
+            isAllCaps = false
+            setTextColor(AppUi.accent)
+            strokeColor = android.content.res.ColorStateList.valueOf(AppUi.outline)
+            setOnClickListener { openBatterySettings() }
+        }
+        batteryContent.addView(batteryButton, LinearLayout.LayoutParams(-1, AppUi.dp(this, 46)))
+        content.addView(AppUi.card(this, batteryContent))
+
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
     }
 
-    private fun iconButton(iconRes: Int, description: String, action: () -> Unit): MaterialButton =
-        MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = ""
+    private fun iconButton(iconRes: Int, description: String, action: () -> Unit): AppCompatImageButton =
+        AppCompatImageButton(this).apply {
             contentDescription = description
-            isAllCaps = false
-            icon = ContextCompat.getDrawable(this@MainActivity, iconRes)
-            iconTint = android.content.res.ColorStateList.valueOf(AppUi.accent)
-            iconPadding = 0
-            insetTop = 0
-            insetBottom = 0
-            setPadding(0, 0, 0, 0)
-            strokeColor = android.content.res.ColorStateList.valueOf(AppUi.outline)
+            setImageResource(iconRes)
+            imageTintList = android.content.res.ColorStateList.valueOf(AppUi.accent)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setPadding(AppUi.dp(this@MainActivity, 13), AppUi.dp(this@MainActivity, 13), AppUi.dp(this@MainActivity, 13), AppUi.dp(this@MainActivity, 13))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(AppUi.surface)
+                setStroke(AppUi.dp(this@MainActivity, 1), AppUi.outline)
+            }
+            isClickable = true
+            isFocusable = true
             setOnClickListener { action() }
         }
 
@@ -173,18 +204,54 @@ class MainActivity : AppCompatActivity() {
             val manager = AppWidgetManager.getInstance(this)
             val provider = ComponentName(this, ScheduleWidgetProvider::class.java)
             if (manager.isRequestPinAppWidgetSupported) {
-                val accepted = manager.requestPinAppWidget(provider, null, null)
+                val callbackIntent = Intent(this, WidgetPinReceiver::class.java).apply {
+                    action = WidgetPinReceiver.ACTION_WIDGET_PINNED
+                    data = android.net.Uri.parse("tusur://widget-pinned/${System.currentTimeMillis()}")
+                }
+                val mutabilityFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+                val flags = PendingIntent.FLAG_UPDATE_CURRENT or mutabilityFlag
+                val callback = PendingIntent.getBroadcast(
+                    this, (System.currentTimeMillis() % Int.MAX_VALUE).toInt(), callbackIntent, flags
+                )
+                val accepted = runCatching { manager.requestPinAppWidget(provider, null, callback) }.getOrDefault(false)
                 if (accepted) {
-                    Toast.makeText(this, "Подтверди добавление в окне главного экрана", Toast.LENGTH_LONG).show()
+                    MaterialAlertDialogBuilder(this)
+                        .setTitle("Запрос отправлен")
+                        .setMessage("Главный экран должен показать подтверждение добавления. Если окно не появилось, откройте рабочий стол и добавьте TUSUR Schedule через меню «Виджеты».")
+                        .setPositiveButton("Открыть рабочий стол") { _, _ ->
+                            val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            runCatching { startActivity(home) }
+                        }
+                        .setNegativeButton("Позже", null)
+                        .show()
                     return
                 }
             }
         }
         MaterialAlertDialogBuilder(this)
             .setTitle("Добавление виджета")
-            .setMessage("Текущий главный экран не поддерживает вызов системного окна добавления из приложения. Зажми пустое место рабочего стола, открой «Виджеты» и выбери TUSUR Schedule.")
-            .setPositiveButton("Понятно", null)
+            .setMessage("Этот главный экран не поддержал быстрый запрос. Зажмите пустое место рабочего стола, откройте «Виджеты» и выберите TUSUR Schedule.")
+            .setPositiveButton("Открыть рабочий стол") { _, _ ->
+                val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                runCatching { startActivity(home) }
+            }
+            .setNegativeButton("Понятно", null)
             .show()
+    }
+
+    private fun openBatterySettings() {
+        val primary = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        val appDetails = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            android.net.Uri.parse("package:$packageName"))
+        try {
+            startActivity(primary)
+        } catch (_: Exception) {
+            try { startActivity(appDetails) } catch (_: Exception) {
+                Toast.makeText(this, "Откройте настройки приложения и раздел «Батарея» вручную.", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun lessonCard(lesson: Lesson, isCurrent: Boolean): MaterialCardView {

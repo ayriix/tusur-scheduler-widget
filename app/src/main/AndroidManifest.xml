@@ -31,6 +31,12 @@
                 android:resource="@xml/schedule_widget_info" />
         </receiver>
 
+        <receiver android:name=".WidgetPinReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="ru.tusur.schedulewidget.WIDGET_PINNED" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".ScheduleWidgetService"
             android:exported="false"

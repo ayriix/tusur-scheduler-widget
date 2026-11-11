@@ -1,12 +1,8 @@
 package ru.tusur.schedulewidget
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.RectF
-import kotlin.math.max
+import kotlin.math.roundToInt
 
 object WidgetAppearance {
     private const val PREFS = "widget_appearance"
@@ -31,15 +27,28 @@ object WidgetAppearance {
     fun setLesson(context: Context, value: Int) { initializeV3Defaults(context); prefs(context).edit().putInt(KEY_LESSON, value).apply() }
     fun setCurrent(context: Context, value: Int) { initializeV3Defaults(context); prefs(context).edit().putInt(KEY_CURRENT, value).apply() }
 
-    fun roundedBitmap(color: Int, width: Int, height: Int, radiusPx: Float): Bitmap {
-        val safeWidth = max(1, width)
-        val safeHeight = max(1, height)
-        val bitmap = Bitmap.createBitmap(safeWidth, safeHeight, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
-        val radius = radiusPx.coerceAtMost(minOf(safeWidth, safeHeight) / 2f)
-        canvas.drawRoundRect(RectF(0f, 0f, safeWidth.toFloat(), safeHeight.toFloat()), radius, radius, paint)
-        return bitmap
+    fun outerBackgroundDrawable(context: Context): Int {
+        val radiusStep = ((radius(context) / 2f).roundToInt() * 2).coerceIn(0, 32)
+        return when (radiusStep) {
+            0 -> R.drawable.widget_outer_r0
+            2 -> R.drawable.widget_outer_r2
+            4 -> R.drawable.widget_outer_r4
+            6 -> R.drawable.widget_outer_r6
+            8 -> R.drawable.widget_outer_r8
+            10 -> R.drawable.widget_outer_r10
+            12 -> R.drawable.widget_outer_r12
+            14 -> R.drawable.widget_outer_r14
+            16 -> R.drawable.widget_outer_r16
+            18 -> R.drawable.widget_outer_r18
+            20 -> R.drawable.widget_outer_r20
+            22 -> R.drawable.widget_outer_r22
+            24 -> R.drawable.widget_outer_r24
+            26 -> R.drawable.widget_outer_r26
+            28 -> R.drawable.widget_outer_r28
+            30 -> R.drawable.widget_outer_r30
+            32 -> R.drawable.widget_outer_r32
+            else -> R.drawable.widget_outer_r24
+        }
     }
 
     fun contrastColor(background: Int): Int {

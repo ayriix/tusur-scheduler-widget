@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.PorterDuff
 import android.net.Uri
 import android.os.Build
 import android.widget.RemoteViews
@@ -92,27 +93,11 @@ class ScheduleWidgetProvider : AppWidgetProvider() {
             val background = WidgetAppearance.background(context)
             val foreground = WidgetAppearance.contrastColor(background)
             val muted = WidgetAppearance.mutedTextColor(background)
-            val options = manager.getAppWidgetOptions(widgetId)
-            val widthDp = maxOf(
-                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 220),
-                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 220), 180
-            )
-            val heightDp = maxOf(
-                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140),
-                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 140), 120
-            )
-            // Keep the rounded background bitmap small enough for the RemoteViews Binder payload.
-            val bitmapScale = minOf(1f, 240f / maxOf(widthDp, heightDp).toFloat())
-            val bgWidth = (widthDp * bitmapScale).toInt().coerceIn(110, 240)
-            val bgHeight = (heightDp * bitmapScale).toInt().coerceIn(90, 240)
-            val bgBitmap = WidgetAppearance.roundedBitmap(
-                background, bgWidth, bgHeight, WidgetAppearance.radius(context) * bitmapScale
-            )
-
             val views = RemoteViews(context.packageName, R.layout.widget_schedule).apply {
-                // Transparent corners are part of the rendered bitmap, so the widget can
-                // have a genuinely adjustable outer radius on different launchers.
-                setImageViewBitmap(R.id.widget_background, bgBitmap)
+                // Drawable resources are transferred by resource ID rather than serializing
+                // large bitmaps through Binder. This is important for reliable widget updates.
+                setImageViewResource(R.id.widget_background, WidgetAppearance.outerBackgroundDrawable(context))
+                setDrawableParameters(R.id.widget_background, false, -1, background, PorterDuff.Mode.SRC_IN, -1)
                 setTextViewText(R.id.widget_group, group.name)
                 setTextViewText(R.id.widget_day, dayFormatter.format(day).replaceFirstChar { it.titlecase(Locale.forLanguageTag("ru")) })
                 setTextViewText(R.id.widget_updated, updatedLabel(context))
@@ -134,19 +119,20 @@ class ScheduleWidgetProvider : AppWidgetProvider() {
                 setOnClickPendingIntent(R.id.widget_next, broadcastIntent(context, widgetId, ACTION_DAY_NEXT, 2))
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    // Android 12+: put the collection directly into RemoteViews. This avoids
-                    // a second remote service process and fixes launchers that leave ListView blank.
-                    val collection = RemoteViews.RemoteCollectionItems.Builder()
+                    // Android 12+: RemoteCollectionItems is preferred for small collections.
+                    // Each row now uses drawable resource IDs and tint actions, not Bitmaps,
+                    // keeping the RemoteViews payload compact for launcher Binder updates.
+                    val items = RemoteViews.RemoteCollectionItems.Builder()
                         .setHasStableIds(true)
                         .setViewTypeCount(1)
                     dayLessons.forEach { lesson ->
-                        collection.addItem(lesson.start, ScheduleWidgetService.lessonView(context, lesson))
+                        items.addItem(lesson.start, ScheduleWidgetService.lessonView(context, lesson))
                     }
-                    setRemoteAdapter(R.id.widget_lessons, collection.build())
+                    setRemoteAdapter(R.id.widget_lessons, items.build())
                 } else {
                     val serviceIntent = Intent(context, ScheduleWidgetService::class.java).apply {
                         putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                        data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+                        data = Uri.parse("tusur://widget-collection/$widgetId")
                     }
                     setRemoteAdapter(R.id.widget_lessons, serviceIntent)
                 }

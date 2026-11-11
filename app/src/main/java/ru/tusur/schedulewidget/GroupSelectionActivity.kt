@@ -2,6 +2,7 @@ package ru.tusur.schedulewidget
 
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -23,12 +24,15 @@ class GroupSelectionActivity : AppCompatActivity() {
     private lateinit var search: EditText
     private lateinit var progress: ProgressBar
     private var allGroups: List<GroupOption> = emptyList()
+    private var directoryFetchStarted = false
+    private var directoryFetchFinished = false
+    private var directoryLoading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         render()
-        showGroups(GroupDirectory.cached(this))
-        loadDirectory()
+        allGroups = GroupDirectory.cached(this).distinctBy { it.path }
+        filter("")
     }
 
     override fun onDestroy() {
@@ -51,12 +55,14 @@ class GroupSelectionActivity : AppCompatActivity() {
             setNavigationIconTint(AppUi.ink)
             setNavigationOnClickListener { finish() }
             elevation = 0f
+            titleCentered = false
+            contentInsetStartWithNavigation = AppUi.dp(this@GroupSelectionActivity, 8)
         }
         root.addView(toolbar, LinearLayout.LayoutParams(-1, AppUi.dp(this, 58)))
 
         val searchContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 8), AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 7))
+            setPadding(AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 8), AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 4))
         }
         val searchBox = TextInputLayout(this).apply {
             hint = "Номер группы или факультет"
@@ -74,16 +80,19 @@ class GroupSelectionActivity : AppCompatActivity() {
         searchContainer.addView(searchBox, LinearLayout.LayoutParams(-1, -2))
         root.addView(searchContainer)
 
-        status = AppUi.text(this, "Загружаю группы…", 12f, AppUi.muted).apply {
+        val statusRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             setPadding(AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 7), AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 7))
         }
-        root.addView(status)
-        progress = ProgressBar(this).apply { isIndeterminate = true }
-        root.addView(progress, LinearLayout.LayoutParams(AppUi.dp(this, 30), AppUi.dp(this, 30)).apply {
-            gravity = Gravity.CENTER_HORIZONTAL
-            topMargin = AppUi.dp(this@GroupSelectionActivity, 5)
-            bottomMargin = AppUi.dp(this@GroupSelectionActivity, 5)
-        })
+        status = AppUi.text(this, "Начните вводить номер группы или название факультета — здесь появятся совпадения.", 12f, AppUi.muted)
+        statusRow.addView(status, LinearLayout.LayoutParams(0, -2, 1f))
+        progress = ProgressBar(this).apply {
+            isIndeterminate = true
+            visibility = View.GONE
+        }
+        statusRow.addView(progress, LinearLayout.LayoutParams(AppUi.dp(this, 20), AppUi.dp(this, 20)))
+        root.addView(statusRow)
 
         val list = RecyclerView(this).apply {
             layoutManager = LinearLayoutManager(this@GroupSelectionActivity)
@@ -103,49 +112,72 @@ class GroupSelectionActivity : AppCompatActivity() {
         setContentView(root)
     }
 
-    private fun loadDirectory() {
-        progress.visibility = android.view.View.VISIBLE
-        executor.execute {
-            try {
-                val groups = GroupDirectory.fetch(applicationContext)
-                runOnUiThread {
-                    if (isFinishing || isDestroyed) return@runOnUiThread
-                    progress.visibility = android.view.View.GONE
-                    showGroups(groups)
-                }
-            } catch (error: Exception) {
-                runOnUiThread {
-                    if (isFinishing || isDestroyed) return@runOnUiThread
-                    progress.visibility = android.view.View.GONE
-                    status.text = if (allGroups.size > 1) {
-                        "Офлайн · сохранено групп: ${allGroups.size}"
-                    } else {
-                        "Каталог пока недоступен. Проверь подключение и повтори попытку."
-                    }
-                    Toast.makeText(this, "Не удалось загрузить каталог: ${error.message ?: "ошибка сети"}", Toast.LENGTH_LONG).show()
-                }
+    private fun filter(query: String) {
+        if (!::adapter.isInitialized) return
+        val needle = query.trim().lowercase()
+        if (needle.isBlank()) {
+            adapter.submit(emptyList())
+            progress.visibility = View.GONE
+            status.text = "Начните вводить номер группы или название факультета — здесь появятся совпадения."
+            return
+        }
+
+        val filtered = allGroups.filter { group ->
+            group.name.lowercase().contains(needle) || group.faculty.lowercase().contains(needle)
+        }
+        adapter.submit(filtered)
+        when {
+            filtered.isNotEmpty() -> {
+                status.text = "Найдено групп: ${filtered.size}"
+                progress.visibility = View.GONE
+            }
+            directoryLoading -> {
+                status.text = "Ищем группы в каталоге ТУСУРа…"
+                progress.visibility = View.VISIBLE
+            }
+            !directoryFetchStarted && needle.length >= 2 -> loadDirectory()
+            directoryFetchFinished -> {
+                status.text = "Совпадений не найдено. Проверьте номер или попробуйте название факультета."
+                progress.visibility = View.GONE
+            }
+            else -> {
+                status.text = "Совпадений пока нет"
+                progress.visibility = View.GONE
             }
         }
     }
 
-    private fun showGroups(groups: List<GroupOption>) {
-        allGroups = groups.distinctBy { it.path }.sortedWith(compareBy({ it.faculty }, { it.name }))
-        filter(search.text?.toString().orEmpty())
-        progress.visibility = android.view.View.GONE
-    }
-
-    private fun filter(query: String) {
-        if (!::adapter.isInitialized) return
-        val needle = query.trim().lowercase()
-        val filtered = if (needle.isBlank()) allGroups else allGroups.filter { group ->
-            group.name.lowercase().contains(needle) || group.faculty.lowercase().contains(needle)
-        }
-        adapter.submit(filtered)
-        status.text = when {
-            allGroups.isEmpty() -> "Список групп пока пуст"
-            filtered.isEmpty() -> "Ничего не найдено"
-            needle.isBlank() -> "${allGroups.size} групп"
-            else -> "Найдено: ${filtered.size}"
+    private fun loadDirectory() {
+        if (directoryFetchStarted) return
+        directoryFetchStarted = true
+        directoryLoading = true
+        progress.visibility = View.VISIBLE
+        status.text = "Ищем группы в каталоге ТУСУРа…"
+        executor.execute {
+            val result = runCatching { GroupDirectory.fetch(applicationContext) }
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                directoryLoading = false
+                directoryFetchFinished = true
+                progress.visibility = View.GONE
+                result.onSuccess { groups -> allGroups = groups.distinctBy { it.path } }
+                val currentQuery = search.text?.toString().orEmpty()
+                val needle = currentQuery.trim().lowercase()
+                if (needle.isBlank()) {
+                    adapter.submit(emptyList())
+                    status.text = "Начните вводить номер группы или название факультета — здесь появятся совпадения."
+                    return@runOnUiThread
+                }
+                val filtered = allGroups.filter {
+                    it.name.lowercase().contains(needle) || it.faculty.lowercase().contains(needle)
+                }
+                adapter.submit(filtered)
+                status.text = when {
+                    result.isFailure && allGroups.size <= 1 -> "Каталог недоступен. Проверьте подключение и повторите поиск."
+                    filtered.isNotEmpty() -> "Найдено групп: ${filtered.size}"
+                    else -> "Совпадений не найдено. Проверьте номер или название факультета."
+                }
+            }
         }
     }
 
@@ -199,6 +231,5 @@ private class GroupAdapter(private val onClick: (GroupOption) -> Unit) : Recycle
     }
 
     override fun getItemCount(): Int = items.size
-
     class Holder(itemView: MaterialCardView, val title: TextView, val subtitle: TextView) : RecyclerView.ViewHolder(itemView)
 }

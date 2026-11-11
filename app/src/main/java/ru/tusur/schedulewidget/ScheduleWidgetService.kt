@@ -3,6 +3,7 @@ package ru.tusur.schedulewidget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.PorterDuff
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import java.time.Instant
@@ -24,14 +25,9 @@ class ScheduleWidgetService : RemoteViewsService() {
             val cardColor = if (isCurrent) WidgetAppearance.current(context) else WidgetAppearance.lesson(context)
             val foreground = WidgetAppearance.contrastColor(cardColor)
             val muted = WidgetAppearance.mutedTextColor(cardColor)
-            val cardBackground = WidgetAppearance.roundedBitmap(
-                color = cardColor,
-                width = 160,
-                height = 56,
-                radiusPx = 11f
-            )
             return RemoteViews(context.packageName, R.layout.widget_lesson_item).apply {
-                setImageViewBitmap(R.id.lesson_item_background, cardBackground)
+                setImageViewResource(R.id.lesson_item_background, R.drawable.widget_lesson_shape)
+                setDrawableParameters(R.id.lesson_item_background, false, -1, cardColor, PorterDuff.Mode.SRC_IN, -1)
                 setTextViewText(
                     R.id.lesson_item_time,
                     "${timeFormatter.format(Instant.ofEpochMilli(lesson.start).atZone(zone))}\n${timeFormatter.format(Instant.ofEpochMilli(lesson.end).atZone(zone))}"
