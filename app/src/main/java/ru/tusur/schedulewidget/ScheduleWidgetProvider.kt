@@ -6,7 +6,6 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.graphics.PorterDuff
 import android.net.Uri
 import android.os.Build
 import android.widget.RemoteViews
@@ -97,7 +96,7 @@ class ScheduleWidgetProvider : AppWidgetProvider() {
                 // Drawable resources are transferred by resource ID rather than serializing
                 // large bitmaps through Binder. This is important for reliable widget updates.
                 setImageViewResource(R.id.widget_background, WidgetAppearance.outerBackgroundDrawable(context))
-                setDrawableParameters(R.id.widget_background, false, -1, background, PorterDuff.Mode.SRC_IN, -1)
+                setInt(R.id.widget_background, "setColorFilter", background)
                 setTextViewText(R.id.widget_group, group.name)
                 setTextViewText(R.id.widget_day, dayFormatter.format(day).replaceFirstChar { it.titlecase(Locale.forLanguageTag("ru")) })
                 setTextViewText(R.id.widget_updated, updatedLabel(context))

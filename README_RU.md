@@ -18,3 +18,9 @@ Android-приложение с домашним виджетом расписа
 - Фоновое обновление зависит от WorkManager, доступности сети и настроек энергосбережения производителя.
 - `requestPinAppWidget()` зависит от поддержки текущего лаунчера. Если быстрый запрос не поддерживается, виджет можно добавить через системный список «Виджеты».
 - На Android 12+ сервисная коллекция должна быть проверена на конкретном launcher. Если белый плейсхолдер сохранится, следующий шаг — получить logcat RemoteViews/RemoteViewsService на устройстве, поскольку это может быть launcher-specific inflation/binding error.
+
+
+## Исправления 2.2.1
+- MaterialToolbar title alignment now uses the public `setTitleCentered(false)` method.
+- Widget drawable tint now uses `RemoteViews.setInt(..., "setColorFilter", color)` on ImageView; `setDrawableParameters` is not a RemoteViews API.
+- VersionCode is 5; versionName is 2.2.1.

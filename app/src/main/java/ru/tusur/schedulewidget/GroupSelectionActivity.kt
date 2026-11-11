@@ -55,7 +55,7 @@ class GroupSelectionActivity : AppCompatActivity() {
             setNavigationIconTint(AppUi.ink)
             setNavigationOnClickListener { finish() }
             elevation = 0f
-            titleCentered = false
+            setTitleCentered(false)
             contentInsetStartWithNavigation = AppUi.dp(this@GroupSelectionActivity, 8)
         }
         root.addView(toolbar, LinearLayout.LayoutParams(-1, AppUi.dp(this, 58)))
