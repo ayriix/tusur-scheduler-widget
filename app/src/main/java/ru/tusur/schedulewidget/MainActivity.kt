@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
         }
         AppUi.installSystemBars(this, root)
 
-        val scroll = ScrollView(this).apply { clipToPadding = false; fillViewport = false }
+        val scroll = ScrollView(this).apply { clipToPadding = false; setFillViewport(false) }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(AppUi.dp(this@MainActivity, 20), AppUi.dp(this@MainActivity, 18), AppUi.dp(this@MainActivity, 20), AppUi.dp(this@MainActivity, 28))
@@ -116,7 +116,7 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(group.browserUrl))) }
         }
         val browserParams = LinearLayout.LayoutParams(0, AppUi.dp(this, 50), 1f).apply {
-            marginStart = AppUi.dp(this, 10)
+            marginStart = AppUi.dp(this@MainActivity, 10)
         }
         actions.addView(openBrowser, browserParams)
         content.addView(actions)
