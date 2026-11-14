@@ -3,6 +3,13 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Optional shared signing key supplied only by GitHub Actions environment variables.
+// Local Android Studio builds continue to use the developer's normal debug.keystore.
+val sharedKeystoreFile = System.getenv("TUSUR_SIGNING_KEYSTORE_FILE")
+val sharedKeystorePassword = System.getenv("TUSUR_SIGNING_STORE_PASSWORD")
+val sharedKeyAlias = System.getenv("TUSUR_SIGNING_KEY_ALIAS")
+val sharedKeyPassword = System.getenv("TUSUR_SIGNING_KEY_PASSWORD")
+
 android {
     namespace = "ru.tusur.schedulewidget"
     compileSdk = 35
@@ -11,8 +18,43 @@ android {
         applicationId = "ru.tusur.schedulewidget"
         minSdk = 23
         targetSdk = 35
-        versionCode = 6
-        versionName = "2.3.0"
+        versionCode = 22
+        versionName = "2.5.12"
+    }
+
+    if (!sharedKeystoreFile.isNullOrBlank()) {
+        signingConfigs {
+            create("sharedUpdateKey") {
+                storeFile = file(sharedKeystoreFile)
+                storePassword = sharedKeystorePassword
+                keyAlias = sharedKeyAlias
+                keyPassword = sharedKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            if (!sharedKeystoreFile.isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("sharedUpdateKey")
+            }
+        }
+
+        getByName("release") {
+            // R8 removes unused code and optimizes bytecode in the release APK.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+
+            // Use the same certificate as Debug in CI so existing installations
+            // signed with the shared update key can be upgraded in place.
+            if (!sharedKeystoreFile.isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("sharedUpdateKey")
+            }
+        }
     }
 
     compileOptions {

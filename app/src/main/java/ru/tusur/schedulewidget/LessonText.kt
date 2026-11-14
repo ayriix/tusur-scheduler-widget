@@ -22,4 +22,56 @@ object LessonText {
             }
         }
     }
+
+    /** Compact label for narrow widget cards while preserving the building prefix. */
+    fun compactRoom(raw: String): String {
+        if (raw.isBlank()) return "каб. —"
+
+        val roomPattern = Regex(
+            "(?i)^\\s*([\\p{L}][\\p{L}.-]*)?\\s*(\\d+[\\p{L}]?)\\s*(?:кабинет|каб\\.?)?\\s*$"
+        )
+        val roomsByBuilding = linkedMapOf<String, MutableList<String>>()
+        var currentBuilding = ""
+
+        // Locations can contain several room numbers separated by commas, semicolons or dots.
+        // If the feed specifies a building only once, following bare room numbers inherit it.
+        raw.replace('\n', ',')
+            .split(Regex("\\s*[,;·]\\s*"))
+            .map(String::trim)
+            .filter(String::isNotBlank)
+            .forEach { part ->
+                val buildingOnly = Regex("(?i)^([\\p{L}][\\p{L}.-]*)$").matchEntire(part)
+                if (buildingOnly != null) {
+                    val suppliedBuilding = buildingOnly.groupValues[1].trim().trimEnd('.')
+                    currentBuilding = when (suppliedBuilding.uppercase()) {
+                        "Ф", "ФЭТ" -> "ФЭТ"
+                        else -> suppliedBuilding.uppercase()
+                    }
+                    return@forEach
+                }
+
+                val match = roomPattern.matchEntire(part) ?: return@forEach
+                val suppliedBuilding = match.groupValues[1].trim().trimEnd('.')
+                if (suppliedBuilding.isNotBlank()) {
+                    currentBuilding = when (suppliedBuilding.uppercase()) {
+                        "Ф", "ФЭТ" -> "ФЭТ"
+                        else -> suppliedBuilding.uppercase()
+                    }
+                }
+                val roomNumber = match.groupValues[2]
+                val buildingRooms = roomsByBuilding.getOrPut(currentBuilding) { mutableListOf() }
+                if (roomNumber !in buildingRooms) buildingRooms += roomNumber
+            }
+
+        if (roomsByBuilding.isEmpty()) {
+            // Unknown location formats are kept intact instead of stripping useful context.
+            return room(raw)
+        }
+
+        return roomsByBuilding.entries.joinToString(" · ") { (building, numbers) ->
+            val roomNumbers = numbers.joinToString("; ")
+            if (building.isBlank()) "$roomNumbers каб." else "$building $roomNumbers каб."
+        }
+    }
+
 }

@@ -15,6 +15,7 @@ object ScheduleStore {
     private const val KEY_GROUP_FACULTY = "group_faculty"
     private const val KEY_GROUP_PATH = "group_path"
     private const val KEY_DATE_PREFIX = "widget_date_"
+    private const val KEY_DATE_RESET_AT_PREFIX = "widget_date_reset_at_"
 
     const val DEFAULT_GROUP_NAME = "576-1"
     const val DEFAULT_GROUP_FACULTY = "Факультет вычислительных систем"
@@ -90,15 +91,50 @@ object ScheduleStore {
             .getOrElse { LocalDate.now(java.time.ZoneId.of("Asia/Tomsk")) }
     }
 
-    fun moveSelectedDate(context: Context, widgetId: Int, days: Int) {
+    @Synchronized
+    fun moveSelectedDate(context: Context, widgetId: Int, days: Int, resetAtMillis: Long) {
+        val today = LocalDate.now(java.time.ZoneId.of("Asia/Tomsk"))
         val next = selectedDate(context, widgetId).plusDays(days.toLong())
-            .coerceIn(LocalDate.now(java.time.ZoneId.of("Asia/Tomsk")).minusDays(30), LocalDate.now(java.time.ZoneId.of("Asia/Tomsk")).plusDays(180))
-        settings(context).edit().putLong(KEY_DATE_PREFIX + widgetId, next.toEpochDay()).apply()
+            .coerceIn(today.minusDays(30), today.plusDays(180))
+        settings(context).edit()
+            .putLong(KEY_DATE_PREFIX + widgetId, next.toEpochDay())
+            .putLong(KEY_DATE_RESET_AT_PREFIX + widgetId, resetAtMillis)
+            .apply()
     }
 
+    /** Removes the widget-specific date override so it immediately falls back to today. */
+    @Synchronized
+    fun resetSelectedDate(context: Context, widgetId: Int) {
+        settings(context).edit()
+            .remove(KEY_DATE_PREFIX + widgetId)
+            .remove(KEY_DATE_RESET_AT_PREFIX + widgetId)
+            .apply()
+    }
+
+    /** Resets only the date belonging to the currently scheduled timeout, ignoring stale workers. */
+    @Synchronized
+    fun resetSelectedDateIfDeadlineMatches(
+        context: Context,
+        widgetId: Int,
+        expectedResetAtMillis: Long
+    ): Boolean {
+        val prefs = settings(context)
+        val actualResetAt = prefs.getLong(KEY_DATE_RESET_AT_PREFIX + widgetId, Long.MIN_VALUE)
+        if (actualResetAt != expectedResetAtMillis) return false
+
+        prefs.edit()
+            .remove(KEY_DATE_PREFIX + widgetId)
+            .remove(KEY_DATE_RESET_AT_PREFIX + widgetId)
+            .apply()
+        return true
+    }
+
+    @Synchronized
     fun resetDayOffsets(context: Context) {
         val editor = settings(context).edit()
-        settings(context).all.keys.filter { it.startsWith(KEY_DATE_PREFIX) }.forEach(editor::remove)
+        settings(context).all.keys
+            .filter { it.startsWith(KEY_DATE_PREFIX) || it.startsWith(KEY_DATE_RESET_AT_PREFIX) }
+            .forEach(editor::remove)
         editor.apply()
     }
 

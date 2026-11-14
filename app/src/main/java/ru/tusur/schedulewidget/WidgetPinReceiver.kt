@@ -13,7 +13,7 @@ class WidgetPinReceiver : BroadcastReceiver() {
         if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
             val manager = AppWidgetManager.getInstance(context)
             ScheduleWidgetProvider.update(context, manager, widgetId)
-            Toast.makeText(context, "Виджет TUSUR Schedule добавлен", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Виджет «Расписание ТУСУР» добавлен", Toast.LENGTH_SHORT).show()
         }
     }
 

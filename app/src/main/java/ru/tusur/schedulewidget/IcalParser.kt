@@ -70,18 +70,7 @@ object IcalParser {
         return lessons.distinctBy { "${it.start}|${it.end}|${it.title}|${it.room}" }.sortedBy { it.start }
     }
 
-    private fun detectLessonType(source: String): String {
-        val text = source.lowercase(Locale.ROOT)
-        return when {
-            Regex("лабораторн|\\blab\\b").containsMatchIn(text) -> "laboratory"
-            Regex("лекци|\\blecture\\b").containsMatchIn(text) -> "lecture"
-            Regex("семинар|\\bseminar\\b").containsMatchIn(text) -> "seminar"
-            Regex("практическ|\\bpractice\\b").containsMatchIn(text) -> "practice"
-            Regex("консультац|\\bconsultation\\b").containsMatchIn(text) -> "consultation"
-            Regex("экзамен|\\bexam\\b").containsMatchIn(text) -> "exam"
-            else -> "other"
-        }
-    }
+    private fun detectLessonType(source: String): String = LessonTypeStyle.normalize(source)
 
     private fun parseDate(value: String?, parameters: String?): Instant? {
         if (value.isNullOrBlank()) return null

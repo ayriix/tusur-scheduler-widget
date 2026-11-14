@@ -1,0 +1,56 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/widget_outer_r24" android:padding="12dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+        android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:gravity="center_vertical" android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:text="576-1" android:textColor="#EFF1F5"
+                android:textStyle="bold" android:textSize="13sp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Ср · 11 ноября" android:textColor="#A4ACB8" android:textSize="11sp" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+            android:layout_weight="1" android:orientation="vertical" android:paddingTop="8dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="56dp"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/widget_lesson_border" android:padding="8dp">
+                <TextView android:layout_width="54dp" android:layout_height="wrap_content"
+                    android:text="10:40\n12:15" android:textColor="#B7C0CF" android:textSize="10sp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="История России" android:textColor="#EFF1F5" android:textSize="11sp" android:textStyle="bold" android:ellipsize="end" android:singleLine="true" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="ГК 428 кабинет · Лекция" android:textColor="#B7C0CF" android:textSize="9sp" />
+                </LinearLayout>
+            </LinearLayout>
+            <FrameLayout android:layout_width="match_parent" android:layout_height="4dp" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="56dp"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/widget_lesson_border" android:padding="8dp">
+                <TextView android:layout_width="54dp" android:layout_height="wrap_content"
+                    android:text="13:15\n14:50" android:textColor="#B7C0CF" android:textSize="10sp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="Информатика" android:textColor="#EFF1F5" android:textSize="11sp" android:textStyle="bold" android:ellipsize="end" android:singleLine="true" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="ФЭТ 327 кабинет · Лабораторная" android:textColor="#B7C0CF" android:textSize="9sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+        <FrameLayout android:layout_width="match_parent" android:layout_height="1dp" android:background="#334E5A70" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="36dp"
+            android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:layout_width="38dp" android:layout_height="match_parent"
+                android:gravity="center" android:text="‹" android:textColor="#EFF1F5" android:textSize="26sp" />
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:gravity="center" android:text="Обновлено · 10:27"
+                android:textColor="#A4ACB8" android:textSize="10sp" />
+            <TextView android:layout_width="38dp" android:layout_height="match_parent"
+                android:gravity="center" android:text="›" android:textColor="#EFF1F5" android:textSize="26sp" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

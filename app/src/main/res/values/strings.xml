@@ -1,4 +1,5 @@
 <resources>
-    <string name="app_name">TUSUR Schedule</string>
-    <string name="widget_description">Расписание выбранной группы</string>
+    <string name="app_name">Расписание ТУСУР</string>
+    <string name="widget_label">Расписание ТУСУР</string>
+    <string name="widget_description">Расписание занятий выбранной группы</string>
 </resources>

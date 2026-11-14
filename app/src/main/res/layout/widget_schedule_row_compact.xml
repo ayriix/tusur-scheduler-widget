@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_lesson_item_root" android:layout_width="match_parent" android:layout_height="58dp">
+    <ImageView android:id="@+id/widget_lesson_item_bg" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/widget_lesson_shape" android:scaleType="fitXY" android:contentDescription="@null" />
+    <ImageView android:id="@+id/widget_lesson_item_border" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/widget_lesson_border" android:scaleType="fitXY" android:contentDescription="@null" />
+    <LinearLayout android:id="@+id/widget_lesson_item_content" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center_vertical" android:paddingStart="9dp" android:paddingEnd="9dp" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:id="@+id/widget_lesson_item_time_start" android:layout_width="42dp" android:layout_height="wrap_content" android:gravity="center_vertical" android:text="10:40" android:textColor="#B7C0CF" android:textSize="13sp" />
+            <FrameLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1">
+                <TextView android:id="@+id/widget_lesson_item_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:text="Название предмета" android:textColor="#EFF1F5" android:textSize="13sp" android:textStyle="bold" android:singleLine="true" android:scrollHorizontally="true" />
+                <ImageView android:id="@+id/widget_lesson_item_title_fade" android:layout_width="24dp" android:layout_height="24dp" android:layout_gravity="end|center_vertical" android:scaleType="fitXY" android:contentDescription="@null" />
+            </FrameLayout>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:id="@+id/widget_lesson_item_time_end" android:layout_width="42dp" android:layout_height="wrap_content" android:gravity="center_vertical" android:text="12:15" android:textColor="#B7C0CF" android:textSize="13sp" />
+            <TextView android:id="@+id/widget_lesson_item_room" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:ellipsize="end" android:maxLines="1" android:text="ФЭТ 327 кабинет" android:textColor="#B7C0CF" android:textSize="11sp" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
