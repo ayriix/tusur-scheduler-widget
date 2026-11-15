@@ -18,8 +18,8 @@ android {
         applicationId = "ru.tusur.schedulewidget"
         minSdk = 23
         targetSdk = 35
-        versionCode = 22
-        versionName = "2.5.12"
+        versionCode = 23
+        versionName = "2.5.13"
     }
 
     if (!sharedKeystoreFile.isNullOrBlank()) {

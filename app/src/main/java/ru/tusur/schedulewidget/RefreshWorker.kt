@@ -3,19 +3,33 @@ package ru.tusur.schedulewidget
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
+import android.os.Build
+import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import java.net.HttpURLConnection
 import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 
 class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    companion object {
+        private const val TAG = "TusurRefreshWorker"
+    }
+
     override suspend fun doWork(): Result {
         var connection: HttpURLConnection? = null
         return try {
             val group = ScheduleStore.selectedGroup(applicationContext)
-            connection = (URL(group.calendarUrl).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 18_000
-                readTimeout = 22_000
+            val url = URL(group.calendarUrl)
+            connection = (url.openConnection() as HttpURLConnection).apply {
+                // Android 7+ uses the host-specific Network Security Config. Android 6
+                // needs the same GlobalSign R46 compatibility via an explicit trust manager.
+                if (this is HttpsURLConnection && TusurTls.isSupportedHost(url.host) &&
+                    Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+                    sslSocketFactory = TusurTls.legacySocketFactory(applicationContext, url.host)
+                }
+                connectTimeout = 25_000
+                readTimeout = 40_000
                 requestMethod = "GET"
                 setRequestProperty("User-Agent", "TUSUR-Schedule/2.0 (Android)")
                 setRequestProperty("Accept", "text/calendar, text/plain, */*")
@@ -32,9 +46,10 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             updateWidgets(applicationContext)
             Result.success()
         } catch (error: Exception) {
-            ScheduleStore.setError(applicationContext, error.message ?: "Не удалось загрузить расписание")
+            Log.e(TAG, "Не удалось обновить расписание", error)
+            ScheduleStore.setError(applicationContext, TusurTls.userFacingError(error))
             updateWidgets(applicationContext)
-            if (runAttemptCount < 2) Result.retry() else Result.failure()
+            if (TusurTls.shouldRetry(error) && runAttemptCount < 2) Result.retry() else Result.failure()
         } finally {
             connection?.disconnect()
         }

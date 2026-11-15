@@ -1,6 +1,7 @@
 package ru.tusur.schedulewidget
 
 import android.os.Bundle
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -86,6 +87,10 @@ class GroupSelectionActivity : AppCompatActivity() {
             setPadding(AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 7), AppUi.dp(this@GroupSelectionActivity, 20), AppUi.dp(this@GroupSelectionActivity, 7))
         }
         status = AppUi.text(this, "Начните вводить номер группы или название факультета — здесь появятся совпадения.", 12f, AppUi.muted)
+        status.setOnClickListener {
+            val query = search.text?.toString().orEmpty().trim()
+            if (query.length >= 2 && !directoryLoading) loadDirectory(force = true)
+        }
         statusRow.addView(status, LinearLayout.LayoutParams(0, -2, 1f))
         progress = ProgressBar(this).apply {
             isIndeterminate = true
@@ -147,8 +152,18 @@ class GroupSelectionActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadDirectory() {
-        if (directoryFetchStarted) return
+    private fun loadDirectory(force: Boolean = false) {
+        if (directoryLoading || (directoryFetchStarted && !force)) return
+        if (!force && !GroupDirectory.shouldFetch(this)) {
+            directoryFetchFinished = true
+            progress.visibility = View.GONE
+            status.text = if (GroupDirectory.hasCachedDirectory(this)) {
+                "Совпадений не найдено в сохранённом каталоге. Нажмите здесь, чтобы обновить его."
+            } else {
+                "Каталог пока недоступен. Нажмите здесь, чтобы повторить загрузку."
+            }
+            return
+        }
         directoryFetchStarted = true
         directoryLoading = true
         progress.visibility = View.VISIBLE
@@ -161,6 +176,7 @@ class GroupSelectionActivity : AppCompatActivity() {
                 directoryFetchFinished = true
                 progress.visibility = View.GONE
                 result.onSuccess { groups -> allGroups = groups.distinctBy { it.path } }
+                result.exceptionOrNull()?.let { Log.e("GroupSelectionActivity", "Не удалось загрузить каталог групп", it) }
                 val currentQuery = search.text?.toString().orEmpty()
                 val needle = currentQuery.trim().lowercase()
                 if (needle.isBlank()) {
@@ -173,9 +189,16 @@ class GroupSelectionActivity : AppCompatActivity() {
                 }
                 adapter.submit(filtered)
                 status.text = when {
-                    result.isFailure && allGroups.size <= 1 -> "Каталог недоступен. Проверьте подключение и повторите поиск."
+                    result.isFailure -> {
+                        val details = TusurTls.userFacingError(result.exceptionOrNull()!!)
+                        if (allGroups.size > 1) {
+                            "Показан сохранённый каталог. $details Нажмите здесь, чтобы повторить загрузку."
+                        } else {
+                            "$details Нажмите здесь, чтобы повторить загрузку."
+                        }
+                    }
                     filtered.isNotEmpty() -> "Найдено групп: ${filtered.size}"
-                    else -> "Совпадений не найдено. Проверьте номер или название факультета."
+                    else -> "Совпадений не найдено. Проверьте номер или попробуйте обновить каталог."
                 }
             }
         }

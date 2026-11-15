@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Keep Android's normal public CA store for every other host. -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!--
+      timetable.tusur.ru currently uses a GlobalSign R46 certificate chain.
+      Add the official GlobalSign Root R46 and current AlphaSSL intermediate only
+      for this exact host, while retaining system roots and hostname verification.
+    -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">timetable.tusur.ru</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/globalsign_root_r46" />
+            <certificates src="@raw/globalsign_gcc_r46_alphassl_ca_2025" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>
